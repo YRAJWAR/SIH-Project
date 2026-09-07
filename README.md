@@ -6,7 +6,7 @@ communities, universities, industry (CSR), NGOs, and government around Jharkhand
 documented societal challenges.
 
 ## Live Demo
-🌐 **[Link will be added after deployment]**
+🌐 **https://sdg-nexus-sih2026.vercel.app**
 
 ## Demo Accounts (Password for all: `Demo@1234`)
 | Role | Email |
