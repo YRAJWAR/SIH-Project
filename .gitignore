@@ -1,0 +1,22 @@
+node_modules/
+# Keep environment variables out of version control
+.env
+.env.local
+.env.production
+.env.production.local
+.env.development.local
+*.env.local
+
+# Build artifacts & caches
+.next/
+tsconfig.tsbuildinfo
+.turbo/
+coverage/
+dist/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Prisma
+/src/generated/prisma
+prisma/dev.db

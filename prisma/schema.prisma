@@ -1,0 +1,859 @@
+// ──────────────────────────────────────────────────────────────
+// SDG Nexus — PostgreSQL Schema (Prisma ORM)
+// Full-stack SDG Impact Intelligence Platform
+// ──────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── 1. Users ────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(uuid())
+  full_name     String
+  email         String   @unique
+  password_hash String
+  avatar_url    String?
+  role          String   @default("DONOR")
+  created_at    DateTime @default(now())
+
+  // Relations
+  donations   Donation[]
+  audit_flags GovernmentAuditFlag[]
+
+  // Donor Relations
+  impact_summary         DonorImpactSummary?
+  sdg_portfolio          DonorSDGPortfolio[]
+  certificates           DonorImpactCertificates[]
+  goals                  DonorGoals[]
+  volunteer_applications VolunteerApplication[]
+
+  // HEI & Student Relations
+  studentProfile StudentProfile?
+  heiId          String?
+  hei            HEI?            @relation("HEIUsers", fields: [heiId], references: [id])
+
+  @@index([role])
+  @@map("users")
+}
+
+// ─── 2. Organizations ────────────────────────────────────────
+
+model Organization {
+  id                  String   @id @default(uuid())
+  name                String
+  type                String
+  logo_url            String?
+  cover_image_url     String?
+  registration_number String?  @unique
+  country             String   @default("India")
+  state               String
+  district            String?
+  verification_status String   @default("PENDING")
+  created_at          DateTime @default(now())
+
+  // Relations
+  projects                Project[]
+  impact_scores           ImpactScore[]
+  csr_allocations         CSRAllocation[]               @relation("CorporateCSR")
+  risk_flags              RiskFlag[]
+  audit_flags             GovernmentAuditFlag[]
+  financial_summary       OrganizationFinancialSummary?
+  score_history           ImpactScoreHistory[]
+  transparency_metrics    TransparencyMetrics?
+  insights                OrganizationInsights[]
+  volunteer_opportunities VolunteerOpportunity[]
+
+  // Corporate Relations
+  csr_compliance     CorporateCSRCompliance[]
+  impact_portfolio   CorporateImpactPortfolio?
+  sdg_distribution   CorporateSDGDistribution[]
+  corporate_insights CorporateStrategyInsights[]
+
+  @@index([type])
+  @@index([state])
+  @@index([district])
+  @@index([verification_status])
+  @@map("organizations")
+}
+
+// ─── TransparencyMetrics ────────────────────────────────────
+
+model TransparencyMetrics {
+  id                 String   @id @default(uuid())
+  organization_id    String   @unique
+  geo_tag_ratio      Float
+  proof_upload_ratio Float
+  update_frequency   Int // Average days between updates
+  transparency_score Float
+  last_calculated    DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@map("transparency_metrics")
+}
+
+// ─── OrganizationInsights ───────────────────────────────────
+
+model OrganizationInsights {
+  id                   String   @id @default(uuid())
+  organization_id      String
+  recommendation_type  String
+  message              String
+  potential_score_gain Float
+  created_at           DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@map("organization_insights")
+}
+
+// ─── 3. Projects ─────────────────────────────────────────────
+
+model Project {
+  id                   String   @id @default(uuid())
+  organization_id      String
+  title                String
+  description          String
+  cover_image_url      String?
+  gallery_images       String?
+  budget_allocated     Float
+  budget_utilized      Float    @default(0)
+  beneficiaries_count  Int      @default(0)
+  outcome_metric_value Float? // 0–100 improvement %
+  latitude             Float?
+  longitude            Float?
+  status               String   @default("DRAFT")
+  created_at           DateTime @default(now())
+
+  // Relations
+  organization    Organization            @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  sdg_tags        ProjectSDG[]
+  activities      ProjectActivity[]
+  donations       Donation[]
+  csr_allocations CSRAllocation[]
+  outcome_metrics ProjectOutcomeMetrics[]
+
+  @@index([organization_id])
+  @@index([status])
+  @@index([organization_id, status]) // geo-impact-summary query optimization
+  @@index([created_at(sort: Desc)])
+  @@index([id]) // Donor tracking optimization
+  @@map("projects")
+}
+
+// ─── ProjectOutcomeMetrics ───────────────────────────────────
+
+model ProjectOutcomeMetrics {
+  id             String   @id @default(uuid())
+  project_id     String
+  baseline_value Float
+  current_value  Float
+  target_value   Float
+  metric_name    String
+  last_updated   DateTime @default(now()) @updatedAt
+
+  // Relations
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  @@index([project_id])
+  @@map("project_outcome_metrics")
+}
+
+// ─── 4. SDGs (Static lookup — seeded 1–17) ───────────────────
+
+model SDG {
+  id   Int    @id // 1–17
+  name String
+
+  // Relations
+  project_sdgs            ProjectSDG[]
+  geo_impact_summaries    GeoImpactSummary[]
+  corporate_distributions CorporateSDGDistribution[]
+  corporate_insights      CorporateStrategyInsights[]
+  donor_portfolios        DonorSDGPortfolio[]
+  donor_certificates      DonorImpactCertificates[]
+  government_insights     GovernmentInsights[]
+
+  @@map("sdgs")
+}
+
+// ─── 5. ProjectSDGs (Many-to-Many) ───────────────────────────
+
+model ProjectSDG {
+  id                  String @id @default(uuid())
+  project_id          String
+  sdg_id              Int
+  ai_confidence_score Float  @default(1.0)
+
+  // Relations
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  sdg     SDG     @relation(fields: [sdg_id], references: [id], onDelete: Cascade)
+
+  @@unique([project_id, sdg_id])
+  @@index([project_id])
+  @@index([sdg_id])
+  @@map("project_sdgs")
+}
+
+// ─── 6. ProjectActivities ────────────────────────────────────
+
+model ProjectActivity {
+  id             String   @id @default(uuid())
+  project_id     String
+  activity_title String
+  description    String
+  latitude       Float?
+  longitude      Float?
+  proof_url      String?
+  hash_value     String
+  created_at     DateTime @default(now())
+
+  // Relations
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  @@index([project_id])
+  @@index([created_at(sort: Desc)])
+  @@map("project_activities")
+}
+
+// ─── 7. ImpactScores ─────────────────────────────────────────
+
+model ImpactScore {
+  id                     String   @id @default(uuid())
+  organization_id        String
+  scale_score            Float
+  outcome_score          Float
+  efficiency_score       Float
+  geographic_need_score  Float
+  transparency_score     Float
+  final_score            Float
+  calculation_version    String   @default("1.0")
+  raw_scale_value        Float?
+  raw_outcome_value      Float?
+  raw_efficiency_value   Float?
+  raw_geo_value          Float?
+  raw_transparency_value Float?
+  calculated_at          DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@index([final_score(sort: Desc)]) // leaderboard queries
+  @@index([calculated_at(sort: Desc)])
+  @@map("impact_scores")
+}
+
+// ─── 8. Donations ────────────────────────────────────────────
+
+model Donation {
+  id         String   @id @default(uuid())
+  project_id String
+  donor_id   String
+  amount     Float
+  created_at DateTime @default(now())
+
+  // Relations
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  donor   User    @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+
+  @@index([project_id])
+  @@index([donor_id])
+  @@index([created_at(sort: Desc)])
+  @@map("donations")
+}
+
+// ─── 9. CSRAllocations ───────────────────────────────────────
+
+model CSRAllocation {
+  id               String   @id @default(uuid())
+  corporate_org_id String
+  project_id       String
+  amount_committed Float
+  amount_disbursed Float    @default(0)
+  financial_year   String
+  created_at       DateTime @default(now())
+
+  // Relations
+  corporate_org Organization @relation("CorporateCSR", fields: [corporate_org_id], references: [id], onDelete: Cascade)
+  project       Project      @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  @@index([corporate_org_id])
+  @@index([project_id])
+  @@index([financial_year])
+  @@map("csr_allocations")
+}
+
+// ─── 10. GeoImpactSummary ────────────────────────────────────
+
+model GeoImpactSummary {
+  id                  String   @id @default(uuid())
+  district            String
+  state               String
+  sdg_id              Int
+  total_funding       Float    @default(0)
+  total_beneficiaries Int      @default(0)
+  avg_impact_score    Float    @default(0)
+  last_updated        DateTime @default(now())
+
+  // Relations
+  sdg SDG @relation(fields: [sdg_id], references: [id], onDelete: Cascade)
+
+  @@unique([district, state, sdg_id])
+  @@index([state])
+  @@index([sdg_id])
+  @@index([total_funding])
+  @@map("geo_impact_summaries")
+}
+
+// ─── 11. RiskFlags ───────────────────────────────────────────
+
+model RiskFlag {
+  id              String   @id @default(uuid())
+  organization_id String
+  risk_type       String
+  risk_level      String   @default("MEDIUM")
+  description     String
+  resolved        Boolean  @default(false)
+  created_at      DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@index([risk_level])
+  @@index([created_at(sort: Desc)])
+  @@map("risk_flags")
+}
+
+// ─── 12. AuditLogs ───────────────────────────────────────────
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  actor_id       String
+  actor_role     String
+  action         String
+  entity_type    String
+  entity_id      String
+  previous_value String?
+  new_value      String?
+  ip_address     String?
+  created_at     DateTime @default(now())
+
+  @@index([entity_type, entity_id])
+  @@index([actor_id])
+  @@index([action])
+  @@index([created_at(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ─── 13. GovernmentAuditFlags ────────────────────────────────
+
+model GovernmentAuditFlag {
+  id                 String    @id @default(uuid())
+  organization_id    String
+  flagged_by_user_id String
+  reason             String
+  severity           String
+  status             String    @default("OPEN")
+  created_at         DateTime  @default(now())
+  resolved_at        DateTime?
+
+  // Relations
+  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  flagged_by_user User         @relation(fields: [flagged_by_user_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@index([status])
+  @@map("government_audit_flags")
+}
+
+// ─── 14. OrganizationFinancialSummary ────────────────────────
+
+model OrganizationFinancialSummary {
+  organization_id          String   @id
+  total_csr_received       Float    @default(0)
+  total_csr_disbursed      Float    @default(0)
+  total_donations_received Float    @default(0)
+  total_budget_utilized    Float    @default(0)
+  active_projects_count    Int      @default(0)
+  completed_projects_count Int      @default(0)
+  last_updated             DateTime @default(now()) @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([total_csr_received])
+  @@map("org_financial_summaries")
+}
+
+// ─── 15. ImpactScoreHistory ──────────────────────────────────
+
+model ImpactScoreHistory {
+  id                    String   @id @default(uuid())
+  organization_id       String
+  final_score           Float
+  scale_score           Float
+  outcome_score         Float
+  efficiency_score      Float
+  transparency_score    Float
+  geographic_need_score Float
+  calculation_version   String
+  recorded_at           DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@index([recorded_at(sort: Desc)])
+  @@map("impact_score_history")
+}
+
+// ─── 16. CorporateCSRCompliance ──────────────────────────────
+
+model CorporateCSRCompliance {
+  id                    String   @id @default(uuid())
+  organization_id       String
+  financial_year        String
+  net_profit            Float
+  required_csr_spend    Float
+  csr_committed         Float    @default(0)
+  csr_disbursed         Float    @default(0)
+  compliance_percentage Float    @default(0)
+  compliance_status     String   @default("COMPLIANT")
+  created_at            DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@map("corporate_csr_compliance")
+}
+
+// ─── 17. CorporateImpactPortfolio ────────────────────────────
+
+model CorporateImpactPortfolio {
+  id                           String   @id @default(uuid())
+  organization_id              String   @unique
+  total_funding_deployed       Float    @default(0)
+  total_beneficiaries          Int      @default(0)
+  average_cost_per_beneficiary Float    @default(0)
+  portfolio_impact_score       Float    @default(0)
+  last_updated                 DateTime @default(now()) @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@map("corporate_impact_portfolio")
+}
+
+// ─── 18. CorporateSDGDistribution ────────────────────────────
+
+model CorporateSDGDistribution {
+  id              String @id @default(uuid())
+  organization_id String
+  sdg_id          Int
+  total_funding   Float  @default(0)
+  total_projects  Int    @default(0)
+  beneficiaries   Int    @default(0)
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  sdg          SDG          @relation(fields: [sdg_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, sdg_id])
+  @@index([organization_id])
+  @@index([sdg_id])
+  @@map("corporate_sdg_distribution")
+}
+
+// ─── 19. CorporateStrategyInsights ───────────────────────────
+
+model CorporateStrategyInsights {
+  id                  String   @id @default(uuid())
+  organization_id     String
+  recommendation_type String
+  message             String
+  suggested_sdg       Int?
+  suggested_region    String?
+  created_at          DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  sdg          SDG?         @relation(fields: [suggested_sdg], references: [id], onDelete: SetNull)
+
+  @@index([organization_id])
+  @@index([suggested_sdg])
+  @@map("corporate_strategy_insights")
+}
+
+// ─── 20. DonorImpactSummary ──────────────────────────────────
+
+model DonorImpactSummary {
+  id                     String   @id @default(uuid())
+  donor_id               String   @unique
+  total_donated          Float    @default(0)
+  beneficiaries_impacted Int      @default(0)
+  projects_supported     Int      @default(0)
+  sdgs_supported         Int      @default(0)
+  impact_per_rupee       Float    @default(0)
+  last_updated           DateTime @default(now()) @updatedAt
+
+  donor User @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+
+  @@map("donor_impact_summaries")
+}
+
+// ─── 21. DonorSDGPortfolio ───────────────────────────────────
+
+model DonorSDGPortfolio {
+  id                     String @id @default(uuid())
+  donor_id               String
+  sdg_id                 Int
+  total_donated          Float  @default(0)
+  beneficiaries_impacted Int    @default(0)
+
+  donor User @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+  sdg   SDG  @relation(fields: [sdg_id], references: [id], onDelete: Cascade)
+
+  @@unique([donor_id, sdg_id])
+  @@index([donor_id])
+  @@index([sdg_id])
+  @@map("donor_sdg_portfolio")
+}
+
+// ─── 22. DonorImpactCertificates ─────────────────────────────
+
+model DonorImpactCertificates {
+  id                     String   @id @default(uuid())
+  donor_id               String
+  donation_id            String
+  sdg_id                 Int
+  beneficiaries_impacted Int      @default(0)
+  issued_at              DateTime @default(now())
+
+  donor User @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+  sdg   SDG  @relation(fields: [sdg_id], references: [id], onDelete: Cascade)
+
+  @@index([donor_id])
+  @@index([donation_id])
+  @@map("donor_impact_certificates")
+}
+
+// ─── 23. DonorGoals ──────────────────────────────────────────
+
+model DonorGoals {
+  id            String   @id @default(uuid())
+  donor_id      String
+  goal_type     String
+  target_value  Float
+  current_value Float    @default(0)
+  created_at    DateTime @default(now())
+
+  donor User @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+}
+
+// ─── 24. GovernmentInsights ───────────────────────────────────
+
+model GovernmentInsights {
+  id             String   @id @default(uuid())
+  insight_type   String
+  message        String
+  related_sdg_id Int?
+  related_region String?
+  created_at     DateTime @default(now())
+
+  sdg SDG? @relation(fields: [related_sdg_id], references: [id], onDelete: SetNull)
+
+  @@index([related_sdg_id])
+  @@index([insight_type])
+  @@map("government_insights")
+}
+
+// ─── 25. GovernmentAlerts ─────────────────────────────────────
+
+model GovernmentAlerts {
+  id                  String   @id @default(uuid())
+  alert_type          String
+  message             String
+  severity            String   @default("INFO")
+  related_entity_id   String?
+  related_entity_type String?
+  is_resolved         Boolean  @default(false)
+  created_at          DateTime @default(now())
+
+  @@index([severity])
+  @@index([is_resolved])
+  @@map("government_alerts")
+}
+
+// ─── 26. Volunteer Opportunities ───────────────────────────────
+
+model VolunteerOpportunity {
+  id                  String   @id @default(uuid())
+  organization_id     String
+  title               String
+  description         String
+  date                DateTime
+  start_time          String
+  end_time            String
+  location            String
+  required_volunteers Int
+  filled_volunteers   Int      @default(0)
+  created_at          DateTime @default(now())
+
+  // Relations
+  organization Organization           @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  applications VolunteerApplication[]
+
+  @@index([organization_id])
+  @@index([date])
+  @@map("volunteer_opportunities")
+}
+
+// ─── 27. Volunteer Applications ────────────────────────────────
+
+model VolunteerApplication {
+  id             String   @id @default(uuid())
+  user_id        String
+  opportunity_id String
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  applied_at     DateTime @default(now())
+
+  // Relations
+  user        User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  opportunity VolunteerOpportunity @relation(fields: [opportunity_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([opportunity_id])
+  @@map("volunteer_applications")
+}
+
+// ══════════════════════════════════════════════════════════════
+// HEI / Challenge / University Collaboration Models
+// ══════════════════════════════════════════════════════════════
+
+// ─── Enums ───────────────────────────────────────────────────
+
+enum ChallengeStatus {
+  SUBMITTED
+  AI_PROCESSED
+  VALIDATED
+  UNIVERSITY_ASSIGNED
+  TEAM_FORMED
+  IN_PROGRESS
+  COMPLETED
+  DEPLOYED
+}
+
+enum ProposalStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum MilestoneStatus {
+  PENDING
+  SUBMITTED
+  GP_VERIFIED
+  CSR_APPROVED
+  REJECTED
+}
+
+// ─── 28. HEI (Higher Education Institution) ─────────────────
+
+model HEI {
+  id                   String              @id @default(cuid())
+  name                 String
+  ugcId                String              @unique
+  district             String
+  departments          String[]
+  sdgExpertise         Int[]
+  naacGrade            String?
+  pastPerformanceScore Float?              @default(0.5)
+  isNewlyOnboarded     Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  users                User[]              @relation("HEIUsers")
+  proposals            ChallengeProposal[]
+  teams                ProjectTeam[]
+
+  @@map("heis")
+}
+
+// ─── 29. StudentProfile ──────────────────────────────────────
+
+model StudentProfile {
+  id          String              @id @default(cuid())
+  userId      String              @unique
+  user        User                @relation(fields: [userId], references: [id])
+  branch      String
+  year        Int
+  skills      String[]
+  credits     Int                 @default(0)
+  rating      Float               @default(0)
+  teamMembers TeamMember[]
+  credentials StudentCredential[]
+
+  @@map("student_profiles")
+}
+
+// ─── 30. Challenge ───────────────────────────────────────────
+
+model Challenge {
+  id            String              @id @default(cuid())
+  title         String
+  description   String
+  district      String
+  block         String?
+  gpsLat        Float
+  gpsLng        Float
+  category      String
+  photoUrls     String[]
+  videoUrls     String[]
+  status        ChallengeStatus     @default(SUBMITTED)
+  sdgTags       Int[]
+  aiConfidence  Float?
+  submittedBy   String
+  submitterType String
+  isAnonymous   Boolean             @default(false)
+  isDuplicate   Boolean             @default(false)
+  duplicateOf   String?
+  gpVerified    Boolean             @default(false)
+  submittedVia  String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  proposals     ChallengeProposal[]
+  notifications Notification[]
+
+  @@index([district])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("challenges")
+}
+
+// ─── 31. ChallengeProposal ───────────────────────────────────
+
+model ChallengeProposal {
+  id              String         @id @default(cuid())
+  challengeId     String
+  challenge       Challenge      @relation(fields: [challengeId], references: [id])
+  heiId           String
+  hei             HEI            @relation(fields: [heiId], references: [id])
+  approach        String
+  timelineWeeks   Int
+  budgetRequested Float
+  fundingSource   String?
+  ipDeclaration   String
+  status          ProposalStatus @default(DRAFT)
+  aiQualityScore  Float?
+  createdAt       DateTime       @default(now())
+  team            ProjectTeam?
+
+  @@index([challengeId])
+  @@index([heiId])
+  @@map("challenge_proposals")
+}
+
+// ─── 32. ProjectTeam ─────────────────────────────────────────
+
+model ProjectTeam {
+  id           String            @id @default(cuid())
+  proposalId   String            @unique
+  proposal     ChallengeProposal @relation(fields: [proposalId], references: [id])
+  heiId        String
+  hei          HEI               @relation(fields: [heiId], references: [id])
+  facultyName  String
+  facultyEmail String
+  backupLead   String?
+  members      TeamMember[]
+  milestones   Milestone[]
+
+  @@index([heiId])
+  @@map("project_teams")
+}
+
+// ─── 33. TeamMember ──────────────────────────────────────────
+
+model TeamMember {
+  id               String         @id @default(cuid())
+  teamId           String
+  team             ProjectTeam    @relation(fields: [teamId], references: [id])
+  studentProfileId String
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  role             String
+
+  @@index([teamId])
+  @@index([studentProfileId])
+  @@map("team_members")
+}
+
+// ─── 34. Milestone ───────────────────────────────────────────
+
+model Milestone {
+  id            String          @id @default(cuid())
+  teamId        String
+  team          ProjectTeam     @relation(fields: [teamId], references: [id])
+  title         String
+  description   String
+  dueDate       DateTime
+  status        MilestoneStatus @default(PENDING)
+  proofUrls     String[]
+  proofVideoUrl String?
+  hashValue     String?
+  gpsLat        Float?
+  gpsLng        Float?
+  exifTimestamp DateTime?
+  verifierCode  String?
+  fundReleased  Float?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([teamId])
+  @@index([status])
+  @@map("milestones")
+}
+
+// ─── 35. StudentCredential ───────────────────────────────────
+
+model StudentCredential {
+  id                String         @id @default(cuid())
+  studentProfileId  String
+  student           StudentProfile @relation(fields: [studentProfileId], references: [id])
+  challengeTitle    String
+  challengeDistrict String
+  sdgTags           Int[]
+  hoursContributed  Int
+  creditPoints      Int
+  nepCompliant      Boolean        @default(true)
+  hashValue         String
+  issuedAt          DateTime       @default(now())
+
+  @@index([studentProfileId])
+  @@map("student_credentials")
+}
+
+// ─── 36. Notification ────────────────────────────────────────
+
+model Notification {
+  id          String     @id @default(cuid())
+  userId      String
+  message     String
+  entityType  String
+  entityId    String
+  read        Boolean    @default(false)
+  priority    String     @default("P2")
+  createdAt   DateTime   @default(now())
+  challengeId String?
+  challenge   Challenge? @relation(fields: [challengeId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt(sort: Desc)])
+  @@map("notifications")
+}

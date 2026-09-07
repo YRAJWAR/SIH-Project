@@ -1,0 +1,417 @@
+@import "tailwindcss";
+
+@theme {
+  /* ─── ImpactBridge Light Theme ───────────────────────────── */
+  --color-primary-50: #f0fdf4;
+  --color-primary-100: #dcfce7;
+  --color-primary-200: #bbf7d0;
+  --color-primary-500: #22c55e;
+  --color-primary-600: #16a34a;
+  --color-primary-700: #15803d;
+  --color-sidebar: #ffffff;
+  --color-sidebar-hover: #f8fafc;
+  --color-sidebar-active: #22c55e;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-body-bg: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-accent-green: #10b981;
+  --color-accent-orange: #f59e0b;
+  --color-accent-red: #ef4444;
+  --color-accent-violet: #8b5cf6;
+  --color-accent-cyan: #06b6d4;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--color-body-bg);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-body-bg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+}
+
+/* ─── Card Styles ──────────────────────────────────────────── */
+.glass-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+  transform: translateY(-1px);
+}
+
+/* Dark glass card — for pages with dark backgrounds (login, register, landing) */
+.glass-card-dark {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  transition: all 0.3s ease;
+}
+
+.glass-card-dark:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* ─── Stat Card Icon Circles ──────────────────────────────── */
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+/* ─── Gradient Text ────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #22c55e, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-cyan {
+  background: linear-gradient(135deg, #22c55e, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────── */
+.btn-neon {
+  background: var(--color-primary-500);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.btn-neon:hover {
+  background: var(--color-primary-600);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-primary-500);
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  border: 1.5px solid var(--color-primary-500);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.btn-outline:hover {
+  background: var(--color-primary-50);
+}
+
+/* ─── SDG Tag Colors (solid pills) ─────────────────────────── */
+.sdg-1 {
+  background: #e5243b;
+  color: white;
+  border: none;
+}
+
+.sdg-2 {
+  background: #dda63a;
+  color: white;
+  border: none;
+}
+
+.sdg-3 {
+  background: #4c9f38;
+  color: white;
+  border: none;
+}
+
+.sdg-4 {
+  background: #c5192d;
+  color: white;
+  border: none;
+}
+
+.sdg-5 {
+  background: #ff3a21;
+  color: white;
+  border: none;
+}
+
+.sdg-6 {
+  background: #26bde2;
+  color: white;
+  border: none;
+}
+
+.sdg-7 {
+  background: #fcc30b;
+  color: #1a1f36;
+  border: none;
+}
+
+.sdg-8 {
+  background: #a21949;
+  color: white;
+  border: none;
+}
+
+.sdg-9 {
+  background: #fd6e25;
+  color: white;
+  border: none;
+}
+
+.sdg-10 {
+  background: #dd1367;
+  color: white;
+  border: none;
+}
+
+.sdg-11 {
+  background: #fd9d24;
+  color: white;
+  border: none;
+}
+
+.sdg-12 {
+  background: #bf8b2e;
+  color: white;
+  border: none;
+}
+
+.sdg-13 {
+  background: #3f7e44;
+  color: white;
+  border: none;
+}
+
+.sdg-14 {
+  background: #0a97d9;
+  color: white;
+  border: none;
+}
+
+.sdg-15 {
+  background: #56c02b;
+  color: white;
+  border: none;
+}
+
+.sdg-16 {
+  background: #0056c8;
+  color: white;
+  border: none;
+}
+
+.sdg-17 {
+  background: #19486a;
+  color: white;
+  border: none;
+}
+
+/* ─── Status Badges ────────────────────────────────────────── */
+.status-active {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.status-completed {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.status-ongoing {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+/* ─── Animations ───────────────────────────────────────────── */
+@keyframes gauge-fill {
+  from {
+    stroke-dashoffset: 283;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+/* ─── Progress bar animation ───────────────────────────────── */
+@keyframes progress-fill {
+  from {
+    width: 0%;
+  }
+}
+
+.progress-bar-animated {
+  animation: progress-fill 1.2s ease-out forwards;
+}
+
+/* ─── Input Styling ────────────────────────────────────────── */
+.input-dark {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  width: 100%;
+  outline: none;
+}
+
+.input-dark:focus {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.input-dark::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Dark-themed input — for login/register on dark backgrounds */
+.input-dark-theme {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  width: 100%;
+  outline: none;
+}
+
+.input-dark-theme:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.input-dark-theme::placeholder {
+  color: #64748b;
+}
+
+/* Select dropdowns inside dark-theme forms */
+select.input-dark-theme {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+select.input-dark-theme option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+/* ─── Leaflet Light Theme ──────────────────────────────────── */
+.leaflet-container {
+  background: var(--color-surface) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--color-surface) !important;
+}
+
+/* ─── Table Styles ─────────────────────────────────────────── */
+.data-table th {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+.data-table tr:hover td {
+  background: var(--color-surface-muted);
+}
